@@ -1,4 +1,7 @@
 terraform {
+  # This is local, because it's simply generating from a template and not changing consul.
+  # The output files from this module are what should be used with terraform cloud / remote.
+  backend "local" {}
   required_providers {
     local = {
       source  = "hashicorp/local"
@@ -21,7 +24,6 @@ variable "provider_json_file" {
 
 resource "local_file" "output_main_file" {
   content = templatefile("${path.module}/template.tftpl", {
-    consul_providers = local.consul_providers
     pairs = local.pairs
   })
   filename = "${var.write_to_dir}/main.tf"
