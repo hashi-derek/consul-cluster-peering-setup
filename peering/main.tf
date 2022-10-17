@@ -40,10 +40,10 @@ locals {
   order = sort([ for p in local.consul_providers: p.alias ])
 
   unclean_pairs = flatten([
-    for k in local.order: [
-      for r in local.order:
-        index(local.order, k) < index(local.order, r)
-          ? { acceptor: k, dialer: r }
+    for a in local.order: [
+      for d in local.order:
+        index(local.order, a) < index(local.order, d)
+          ? { acceptor: a, dialer: d }
           : {}
     ]
   ])
