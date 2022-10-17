@@ -1,20 +1,12 @@
-%{ for p in consul_providers ~}
-provider "consul" {
-  address = "${p.address}"
-  alias = "genprov-${p.alias}"
-}
-
-%{ endfor ~}
-
-
+# This file is auto-generated.
 
 %{ for p in pairs ~}
 resource "consul_peering_token" "${p.acceptor}-to-${p.dialer}" {
-  provider  = consul.genprov-${p.acceptor}
+  provider  = consul.${p.acceptor}
   peer_name = "${p.dialer}"
 }
 resource "consul_peering" "${p.dialer}-to-${p.acceptor}" {
-  provider  = consul.genprov-${p.dialer}
+  provider  = consul.${p.dialer}
   peer_name = "${p.acceptor}"
   peering_token = consul_peering_token.${p.acceptor}-to-${p.dialer}.peering_token
 }
