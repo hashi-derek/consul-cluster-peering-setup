@@ -56,10 +56,10 @@ locals {
           ? {
               acceptor: a.alias,
               acceptor_partition: a.partition,
-              acceptor_name: a.partition == "" ? a.alias: "${a.alias}_${a.partition}",
+              acceptor_name: a.partition == "" ? a.alias: "${a.alias}-${a.partition}",
               dialer: d.alias,
               dialer_partition: d.partition,
-              dialer_name: d.partition == "" ? d.alias: "${d.alias}_${d.partition}",
+              dialer_name: d.partition == "" ? d.alias: "${d.alias}-${d.partition}",
             }
           : {}
     ]
