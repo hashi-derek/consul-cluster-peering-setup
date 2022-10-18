@@ -4,11 +4,17 @@
 resource "consul_peering_token" "${p.acceptor}-to-${p.dialer}" {
   provider  = consul.${p.acceptor}
   peer_name = "${p.dialer}"
+  %{~ if p.acceptor_partition != "" ~}
+  partition = "${p.acceptor_partition}"
+  %{~ endif ~}
 }
 resource "consul_peering" "${p.dialer}-to-${p.acceptor}" {
   provider  = consul.${p.dialer}
   peer_name = "${p.acceptor}"
   peering_token = consul_peering_token.${p.acceptor}-to-${p.dialer}.peering_token
+  %{~ if p.dialer_partition != "" ~}
+  partition = "${p.dialer_partition}"
+  %{~ endif ~}
 }
 
 
