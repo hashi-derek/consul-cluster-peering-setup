@@ -18,9 +18,12 @@ variable "provider_json_file" {
   default = "consul_providers.tf.json"
 }
 
-variable "partitions" {
-  type = map(list(string))
-  default = {}
+variable "peerings" {
+  type = list(object({
+    alias = string
+    partition = optional(string, "")
+  }))
+  default = []
 }
 
 
@@ -36,74 +39,36 @@ resource "local_file" "output_provider_file" {
   filename = "${var.write_to_dir}/consul_providers.tf.json"
 }
 
-# TODO remove this
-resource "local_file" "test_file" {
-  content = jsonencode(local.a_partition_pairs)
-  filename = "${var.write_to_dir}/test_output.json"
-}
-
-
 locals {
   consul_providers = jsondecode(file("${var.provider_json_file}")).provider.consul
+  providers_by_alias = { for p in local.consul_providers: p.alias => p }
+
+  # Default to the providers list if peerings are not explicitly defined.
+  peerings = length(var.peerings) > 0 ? var.peerings : [ for p in local.consul_providers: { alias: p.alias, partition: "" } ]
 
   # We will use this to do lexicographical comparisons by fetching indexes.
-  order = sort([ for p in local.consul_providers: p.alias ])
+  order = sort([ for p in local.peerings: "${p.alias}+${p.partition}" ])
 
   unclean_pairs = flatten([
-    for a in local.order: [
-      for d in local.order:
-        index(local.order, a) < index(local.order, d)
-          ? { acceptor: a, dialer: d, acceptor_partition: "", dialer_partition: "" }
+    for a in local.peerings: [
+      for d in local.peerings:
+        index(local.order, "${a.alias}+${a.partition}") < index(local.order, "${d.alias}+${d.partition}") && a.alias != d.alias
+          ? {
+              acceptor: a.alias,
+              acceptor_partition: a.partition,
+              acceptor_name: a.partition == "" ? a.alias: "${a.alias}_${a.partition}",
+              dialer: d.alias,
+              dialer_partition: d.partition,
+              dialer_name: d.partition == "" ? d.alias: "${d.alias}_${d.partition}",
+            }
           : {}
     ]
   ])
+  # This will contain the list of all clusters that should be contacting eachother.
+  # A cluster cannot peer to itself.
   cluster_pairs = setsubtract(distinct(local.unclean_pairs), [{}])
 
   # We could stop here if partitions didn't exist.
-  # pairs = local.cluster_pairs
-
-
-
-  # Attach any defined partitions.
-  a_partition_pairs = flatten([
-    for p in local.cluster_pairs: [
-      for a in try(var.partitions[p.acceptor], []):
-       {
-        acceptor: p.acceptor,
-        dialer: p.dialer,
-        acceptor_partition: a,
-       }
-    ]
-  ])
-  d_partition_pairs = flatten([
-    for p in local.cluster_pairs: [
-      for d in try(var.partitions[p.dialer], []):
-       {
-        acceptor: p.acceptor,
-        dialer: p.dialer,
-        dialer_partition: d,
-       }
-    ]
-  ])
-
-  /*
-  cross_product_pairs = flatten([
-    for a in 
-  ])
-
-  # Merge the two different partition lists together
-  a_lookup_pairs = {
-    for p in local.a_partition_pairs: "${p.acceptor};${p.acceptor_partition};${p.dialer};${p.dialer_partition}" => p
-  }
-  d_lookup_pairs = {
-    for p in local.d_partition_pairs: "${p.acceptor};${p.acceptor_partition};${p.dialer};${p.dialer_partition}" => p
-  }
-  pairs = distinct([
-    for 
-  ])
-  */
-  
-
   pairs = local.cluster_pairs
 }
 
