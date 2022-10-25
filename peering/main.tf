@@ -18,7 +18,7 @@ variable "provider_json_file" {
   default = "consul_providers.tf.json"
 }
 
-variable "peerings" {
+variable "peering_acceptors" {
   type = list(object({
     alias = string
     partition = optional(string, "")
@@ -26,6 +26,13 @@ variable "peerings" {
   default = []
 }
 
+variable "peering_dialers" {
+  type = list(object({
+    alias = string
+    partition = optional(string, "")
+  }))
+  default = []
+}
 
 resource "local_file" "output_main_file" {
   content = templatefile("${path.module}/template.tftpl", {
@@ -40,19 +47,27 @@ resource "local_file" "output_provider_file" {
 }
 
 locals {
-  consul_providers = jsondecode(file("${var.provider_json_file}")).provider.consul
-
-  # Default to the providers list if peerings are not explicitly defined.
-  peerings = length(var.peerings) > 0 ? var.peerings : [ for p in local.consul_providers: { alias: p.alias, partition: "" } ]
-
   # We will use this to do lexicographical comparisons by fetching indexes.
-  order = sort([ for p in local.peerings: "${p.alias}+${p.partition}" ])
+  # It is necessary to establish asymmetry so that the cross product doesn't
+  # produce (x,y) and (y,x) pairs.
+  order = distinct(concat(
+    sort([ for p in var.peering_acceptors: "${p.alias}+${p.partition}" ]),
+    sort([ for p in var.peering_dialers: "${p.alias}+${p.partition}" ]),
+  ))
 
   unclean_pairs = flatten([
-    for a in local.peerings: [
-      for d in local.peerings:
-        index(local.order, "${a.alias}+${a.partition}") < index(local.order, "${d.alias}+${d.partition}") && a.alias != d.alias
-          ? {
+    for a in var.peering_acceptors: [
+      for d in var.peering_dialers:
+        # Skip pairs of the same cluster
+        a.alias == d.alias ||
+        # Skip the second instance if we see the same pair twice.
+        (
+          contains(var.peering_acceptors, { alias: d.alias, partition: d.partition })
+          && contains(var.peering_dialers, { alias: a.alias, partition: a.partition })
+          && index(local.order, "${a.alias}+${a.partition}") > index(local.order,"${d.alias}+${d.partition}")
+        )
+          ? {}
+          : {
               acceptor: a.alias,
               acceptor_partition: a.partition,
               acceptor_name: a.partition == "" ? a.alias: "${a.alias}-${a.partition}",
@@ -60,7 +75,6 @@ locals {
               dialer_partition: d.partition,
               dialer_name: d.partition == "" ? d.alias: "${d.alias}-${d.partition}",
             }
-          : {}
     ]
   ])
   # This will contain the list of all clusters that should be contacting eachother.
