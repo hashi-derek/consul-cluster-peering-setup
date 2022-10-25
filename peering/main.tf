@@ -41,7 +41,6 @@ resource "local_file" "output_provider_file" {
 
 locals {
   consul_providers = jsondecode(file("${var.provider_json_file}")).provider.consul
-  providers_by_alias = { for p in local.consul_providers: p.alias => p }
 
   # Default to the providers list if peerings are not explicitly defined.
   peerings = length(var.peerings) > 0 ? var.peerings : [ for p in local.consul_providers: { alias: p.alias, partition: "" } ]
