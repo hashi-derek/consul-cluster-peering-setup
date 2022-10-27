@@ -1,9 +1,0 @@
-{
- "provider": {
-  "consul": [
-   { "alias": "alias1", "address": "localhost:8500"}, 
-   { "alias": "alias2", "address": "localhost:9500"}, 
-   { "alias": "alias3", "address": "localhost:7500"}
-  ]
- }
-}
