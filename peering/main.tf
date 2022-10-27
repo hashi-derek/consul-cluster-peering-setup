@@ -13,9 +13,9 @@ variable "write_to_dir" {
   default = "generated_module"
 }
 
-variable "provider_json_file" {
+variable "provider_file" {
   type = string
-  default = "consul_providers.tf.json"
+  default = "providers.tf"
 }
 
 variable "peering_acceptors" {
@@ -42,8 +42,8 @@ resource "local_file" "output_main_file" {
 }
 
 resource "local_file" "output_provider_file" {
-  content = file("${var.provider_json_file}")
-  filename = "${var.write_to_dir}/consul_providers.tf.json"
+  content = file("${var.provider_file}")
+  filename = "${var.write_to_dir}/${basename(var.provider_file)}"
 }
 
 locals {
