@@ -1,3 +1,4 @@
+# Cluster 2
 ports {
   dns = 9600
   http = 9500
@@ -9,7 +10,6 @@ ports {
 }
 server = true
 bootstrap = true
-#data_dir = "/tmp/consul-dc2"
 bind_addr = "127.0.0.1"
 datacenter = "dc2"
 node_name = "secondary"

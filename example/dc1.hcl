@@ -1,3 +1,4 @@
+# Cluster 1
 ports {
   dns = 8600
   http = 8500
@@ -10,7 +11,6 @@ ports {
 bind_addr = "127.0.0.1"
 bootstrap = true
 server = true
-#data_dir = "/tmp/consul-dc1"
 datacenter = "dc1"
 node_name = "primary"
 ui_config {
